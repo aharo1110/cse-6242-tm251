@@ -7,8 +7,8 @@
     <script src="https://d3js.org/d3.v4.min.js"></script>
 </head>
 <body>
-    <div class="container-sm">
-        <h1>{{name}}</h1>
+    <div class="container-sm" style="padding:3em;">
+        <h2>Matchdate: {{name}}</h2>
 
         <div id="histogram"></div>
         <a href="/">Go Back</a>
@@ -18,7 +18,7 @@
     <script>
         // Dimensions/margins
         var margin = {top: 10, right: 30, bottom: 30, left: 40},
-        width = 800 - margin.left - margin.right,
+        width = 1200 - margin.left - margin.right,
         height = 500 - margin.top - margin.bottom;
 
         // SVG obj
@@ -30,7 +30,7 @@
             .attr("transform",
                 "translate(" + margin.left + "," + margin.top + ")");
         
-        const parse_time = d3.timeParse("%Y-%m-%d %H:%M:%S")
+        const parse_time = d3.utcParse("%Y-%m-%d %H:%M:%S")
 
         // data parse
         d3.csv("{{ url_for('static', filename=path)}}")
@@ -42,8 +42,14 @@
                 };
             })
             .get(function(data) {
-                console.log(data)
-                data = data.filter(function(d){return d.nearest_event_match == "{{ name }}"})
+                data = data.filter(function(d){return d.datetime.toISOString().substring(0, 10) == "{{ name }}"})
+                event_data = data.filter(function(d){return d.nearest_event_match != "none"})
+                
+                event_start = d3.min(event_data, function(d) {return +d.datetime})
+                event_end = d3.max(event_data, function(d) {return +d.datetime})
+
+                console.log(event_start)
+                console.log(event_end)
                 // X axis
                 var x = d3.scaleLinear()
                     .domain([d3.min(data, function(d) { return +d.datetime }), d3.max(data, function(d) { return +d.datetime })])
@@ -52,13 +58,13 @@
                 // X axis ticks
                 svg.append("g")
                     .attr("transform", "translate(0," + height + ")")
-                    .call(d3.axisBottom(x).tickFormat(d3.timeFormat("%H:%M:%S")));
+                    .call(d3.axisBottom(x).tickFormat(d3.utcFormat("%H:%M:%S")));
 
                 // Histogram's parameters
                 var histogram = d3.histogram()
                     .value(function(d) { return d.datetime; })
                     .domain(x.domain())
-                    .thresholds(x.ticks(30));
+                    .thresholds(x.ticks(400));
 
                 // Bins of histogram
                 var bins = histogram(data);
@@ -82,6 +88,13 @@
                         .attr("width", function(d) { return x(d.x1) - x(d.x0) -1 ; })
                         .attr("height", function(d) { return height - y(d.length); })
                         .style("fill", "#4F6F8F")
+
+                svg.append("rect")
+                    .attr("x", x(event_start))
+                    .attr("width", function(d) { return x(event_end) - x(event_start);})
+                    .attr("height", height)
+                    .style("fill", "#2F4F6F")
+                    .style("opacity", "30%")
             });
     </script>
     

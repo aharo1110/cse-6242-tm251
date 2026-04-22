@@ -36,7 +36,9 @@ def main():
     matches = list(set([i[l["nearest_event_match"]] for i in r if i[l["nearest_event_match"]] != "none"]))
     matches.sort()
 
-    return render_template('index.html', matches=matches)
+    dates = ["2018-07-01", "2018-07-03", "2018-07-15"]
+
+    return render_template('index.html', matches=dates)
 
 @app.route("/match", methods=['GET'])
 def match():

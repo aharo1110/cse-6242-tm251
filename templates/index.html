@@ -6,11 +6,13 @@
     <title>Main Page</title>
 </head>
 <body>
-    <div class="container-sm">
-        <h1>Just testing...</h1>
+    <div class="container-sm" style="padding:3em;">
+        <h2>FIFA World Cup Event Visualization</h2>
+        <p>Below is a dropdown with matchdates that have detected events.</p>
+        <p>Upon picking a matchdate, you can see a graph that visualizes tweet data and offers sentiment data for said event(s).</p>
         <div class="dropdown">
             <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
-                Select match
+                Select matchdate
             </button>
             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
                 {% for i in matches%}
