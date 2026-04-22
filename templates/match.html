@@ -1,0 +1,19 @@
+{{ bootstrap.load_css() }}
+{{ bootstrap.load_js() }}
+
+<!DOCTYPE html>
+<head>
+    <title>Main Page</title>
+</head>
+<body>
+    <div class="container-sm">
+        <h1>{{name}}</h1>
+        <ul>
+            {% for i in times %}
+            <li>{{i}}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    
+</body>
