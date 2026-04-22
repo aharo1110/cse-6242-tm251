@@ -4,16 +4,85 @@
 <!DOCTYPE html>
 <head>
     <title>Main Page</title>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
 </head>
 <body>
     <div class="container-sm">
         <h1>{{name}}</h1>
-        <ul>
-            {% for i in times %}
-            <li>{{i}}</li>
-            {% endfor %}
-        </ul>
+
+        <div id="histogram"></div>
+        <a href="/">Go Back</a>
     </div>
 
+
+    <script>
+        // Dimensions/margins
+        var margin = {top: 10, right: 30, bottom: 30, left: 40},
+        width = 800 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom;
+
+        // SVG obj
+        var svg = d3.select("#histogram")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform",
+                "translate(" + margin.left + "," + margin.top + ")");
+        
+        const parse_time = d3.timeParse("%Y-%m-%d %H:%M:%S")
+
+        // data parse
+        d3.csv("{{ url_for('static', filename=path)}}")
+            .row(function(d) {
+                return {
+                    nearest_event_match: d.nearest_event_match,
+                    datetime: new Date(parse_time(d.datetime))
+                    // Add more if necessary
+                };
+            })
+            .get(function(data) {
+                console.log(data)
+                data = data.filter(function(d){return d.nearest_event_match == "{{ name }}"})
+                // X axis
+                var x = d3.scaleLinear()
+                    .domain([d3.min(data, function(d) { return +d.datetime }), d3.max(data, function(d) { return +d.datetime })])
+                    .range([0, width]);
+                
+                // X axis ticks
+                svg.append("g")
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(d3.axisBottom(x).tickFormat(d3.timeFormat("%H:%M:%S")));
+
+                // Histogram's parameters
+                var histogram = d3.histogram()
+                    .value(function(d) { return d.datetime; })
+                    .domain(x.domain())
+                    .thresholds(x.ticks(30));
+
+                // Bins of histogram
+                var bins = histogram(data);
+
+                // Y axis
+                var y = d3.scaleLinear()
+                    .range([height, 0]);
+                y.domain([0, d3.max(bins, function(d) { return d.length; })]);
+                
+                // Y axis ticks
+                svg.append("g")
+                    .call(d3.axisLeft(y));
+
+                // Histogram bar rects
+                svg.selectAll("rect")
+                    .data(bins)
+                    .enter()
+                    .append("rect")
+                        .attr("x", 1)
+                        .attr("transform", function(d) { return "translate(" + x(d.x0) + "," + y(d.length) + ")"; })
+                        .attr("width", function(d) { return x(d.x1) - x(d.x0) -1 ; })
+                        .attr("height", function(d) { return height - y(d.length); })
+                        .style("fill", "#4F6F8F")
+            });
+    </script>
     
 </body>

@@ -5,8 +5,11 @@ import csv
 app = Flask(__name__)
 bootstrap = Bootstrap5(app)
 
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
 paths = {
-    "csv": "data/fifa_tweets_sentiment.csv"
+    "csv": "static/data/fifa_tweets_sentiment.csv",
+    "csv_indir": "data/fifa_tweets_sentiment.csv"
 }
 
 def read_data():
@@ -39,8 +42,8 @@ def main():
 def match():
     if request.method != 'GET':
         return render_template('match-no.html')
-    match_data = [i for i in r if i[l["nearest_event_match"]] == request.args["match"]]
+    #match_data = [i for i in r if i[l["nearest_event_match"]] == request.args["match"]]
 
-    timestamps = [i[l["datetime"]] for i in match_data]
+    #timestamps = [i[l["datetime"]] for i in match_data]
 
-    return render_template('match.html', name=request.args["match"], times=timestamps)
+    return render_template('match.html', name=request.args["match"], path=paths["csv_indir"])
