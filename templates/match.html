@@ -12,28 +12,39 @@
 <body>
     <div class="container-sm" style="padding:3em;">
         <h2>Matchdate: {{name}}</h2>
-        <p>Time at the bottom is in UTC.<br>The vertical axis shows the amount of tweets over time in the match.<br>In order to find info on sentiment during event(s) hover over with the mouse.</p>
-        <a href="/">Go Back</a>
-        <div id="histogram"></div>
-        <div id="match-info" style="display:flex; width: 100%; opacity: 0%">
-            <div id="match-text">
-                <p><b>Match:</b>
-                    <br><b>Event:</b></p>
-            </div>
-            <div><h6 style="width:320px; text-align:center; font-weight: bold;">Transformer Analysis</h6>
-                <div id="match-chart"></div></div>
-            
+        <div style="width: 100%; display: flex; justify-content: space-between;">
+            <p>Time at the bottom is in UTC. The vertical axis shows the amount of tweets over time in the match.<br>In order to find info on sentiment during event(s) hover over with the mouse.</p>
+            <a href="/" class="btn btn-primary" style="height:fit-content;">Go Back</a>
         </div>
+        <div id="histogram"></div>
+        <div class="card" style="width: 40rem; margin-left: auto; margin-right: auto;">
+            <div id="match-info" class="card-body" style="display:flex; opacity: 0%; justify-content: space-between;">
+                <div>
+                    <h5 class="card-title">Event Info</h5>
+                    <div id="match-text">
+                    </div>
+                </div>
+                <div><h6 style="width:320px; text-align:center; font-weight: bold;">Transformer Analysis</h6>
+                    <div id="match-chart" style="margin-bottom: 0"></div></div>
+            
+            </div>
+        </div>
+        
     </div>
-
+    {% include 'partials/footer.html '%}
 
     <script>
         // Dimensions/margins
-        var margin = {top: 10, right: 30, bottom: 30, left: 40},
-        width = 1200 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
 
-        var pie_dim = 250;
+        const site_width = document.querySelector("#histogram").offsetWidth;
+        console.log(site_width)
+
+        var margin = {top: 10, right: 30, bottom: 30, left: 40},
+        width = site_width - margin.left - margin.right,
+        height = 350 - margin.top - margin.bottom;
+
+        var pie_margin = {top: 10, right: 10, bottom: 10, left: 30},
+        pie_dim = 250;
 
         // SVG obj
         var svg = d3.select("#histogram")
@@ -64,6 +75,11 @@
             "Disgust": "#f28e2c",
             "Sadness": "#af7aa1",
             "Anger": "#e15759"
+        }
+        const outcome_color = {
+            "positive": "#3c6d35",
+            "neutral": "#867f7c",
+            "negative": "#ae4344"
         }
 
         // data parse
@@ -198,10 +214,10 @@
 
                     // Basic attributes
                     match_text.innerHTML = `
-                    <p><b>Match:</b> ${event_attributes.match}
+                    <p class="card-text"><b>Match:</b> ${event_attributes.match}
                     <br><b>Event:</b> ${event_attributes.type}</p>
-                    <p>VADER baseline: ${event_sentiment.vader_avg.toFixed(2)} (${vader_outcome})
-                    <br>TextBlob baseline: ${event_sentiment.tb_avg.toFixed(2)} (${tb_outcome})</p>
+                    <p class="card-text">VADER baseline: <b>${event_sentiment.vader_avg.toFixed(2)} <span style="color:${outcome_color[vader_outcome]}">(${vader_outcome})</span></b>
+                    <br>TextBlob baseline: <b>${event_sentiment.tb_avg.toFixed(2)} <span style="color:${outcome_color[tb_outcome]}">(${tb_outcome})</span></b></p>
                     `
                     
                     match_info_div = document.querySelector("#match-info")
@@ -212,13 +228,13 @@
                     pie_div.selectAll("*").remove();
 
                     pie_svg = pie_div.append("svg")
-                        .attr("width", pie_dim + margin.left + margin.right)
-                        .attr("height", pie_dim + margin.top + margin.bottom)
+                        .attr("width", pie_dim + pie_margin.left + pie_margin.right)
+                        .attr("height", pie_dim + pie_margin.top + pie_margin.bottom)
                     
                     // Pie chart slices
                     pie_svg.append("g")
                         .attr("transform",
-                            "translate(" + (radius + margin.left) + "," + (radius + margin.top) + ")")
+                            "translate(" + (radius + pie_margin.left) + "," + (radius + pie_margin.top) + ")")
                         .selectAll()
                         .data(pie(event_sentiment.transformer_data))
                         .join("path")
@@ -233,7 +249,7 @@
                             .attr("font-size", "11")
                             .attr("text-anchor", "middle")
                             .attr("transform",
-                            "translate(" + (radius + margin.left) + "," + (radius + margin.top) + ")")
+                            "translate(" + (radius + pie_margin.left) + "," + (radius + pie_margin.top) + ")")
                         .selectAll()
                         .data(pie(event_sentiment.transformer_data))
                         .join("text")
