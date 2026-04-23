@@ -3,15 +3,16 @@
 
 <!DOCTYPE html>
 <head>
-    <title>Main Page</title>
-    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <title>Data on Matchdate {{name}}</title>
+    <script type="text/javascript" src="https://d3js.org/d3.v5.min.js"></script>
+    <script type="text/javascript" src="https://d3js.org/d3-dsv.min.js"></script>
 </head>
 <body>
     <div class="container-sm" style="padding:3em;">
         <h2>Matchdate: {{name}}</h2>
-
-        <div id="histogram"></div>
+        <p>Time at the bottom is in UTC.<br>The vertical axis shows the amount of tweets over time in the match.<br>In order to find info on sentiment during event(s) hover over with the mouse.</p>
         <a href="/">Go Back</a>
+        <div id="histogram"></div>
     </div>
 
 
@@ -33,23 +34,51 @@
         const parse_time = d3.utcParse("%Y-%m-%d %H:%M:%S")
 
         // data parse
-        d3.csv("{{ url_for('static', filename=path)}}")
-            .row(function(d) {
+        d3.dsv(",", "{{ url_for('static', filename=path)}}", function(d) {
                 return {
                     nearest_event_match: d.nearest_event_match,
-                    datetime: new Date(parse_time(d.datetime))
+                    nearest_event_type: d.nearest_event_type,
+                    datetime: new Date(parse_time(d.datetime)),
+                    vader_compound: d.vader_compound,
+                    tb_polarity: d.tb_polarity,
+                    emo_joy: d.emo_joy,
+                    emo_sadness: d.emo_sadness,
+                    emo_anger: d.emo_anger,
+                    emo_fear: d.emo_fear,
+                    emo_disgust: d.emo_disgust,
+                    emo_surprise: d.emo_surprise,
+                    emo_neutral: d.emo_neutral
                     // Add more if necessary
-                };
+                }
             })
-            .get(function(data) {
+            .then(function(data) {
                 data = data.filter(function(d){return d.datetime.toISOString().substring(0, 10) == "{{ name }}"})
                 event_data = data.filter(function(d){return d.nearest_event_match != "none"})
                 
                 event_start = d3.min(event_data, function(d) {return +d.datetime})
                 event_end = d3.max(event_data, function(d) {return +d.datetime})
 
+                event_attributes = {
+                    match: event_data[0]["nearest_event_match"],
+                    type: event_data[0]["nearest_event_type"]
+                }
+
+                event_sentiment = {
+                    vader_avg: d3.mean(event_data, function(d) { return d.vader_compound}),
+                    tb_avg: d3.mean(event_data, function(d) { return d.tb_polarity}),
+                    emo_joy: d3.mean(event_data, function(d) { return d.emo_joy}),
+                    emo_sadness: d3.mean(event_data, function(d) { return d.emo_sadness}),
+                    emo_anger: d3.mean(event_data, function(d) { return d.emo_anger}),
+                    emo_fear: d3.mean(event_data, function(d) { return d.emo_fear}),
+                    emo_disgust: d3.mean(event_data, function(d) { return d.emo_disgust}),
+                    emo_surprise: d3.mean(event_data, function(d) { return d.emo_surprise}),
+                    emo_neutral: d3.mean(event_data, function(d) { return d.emo_neutral}),
+                }
+
                 console.log(event_start)
                 console.log(event_end)
+                console.log(event_attributes)
+                console.log(event_sentiment)
                 // X axis
                 var x = d3.scaleLinear()
                     .domain([d3.min(data, function(d) { return +d.datetime }), d3.max(data, function(d) { return +d.datetime })])
@@ -95,6 +124,25 @@
                     .attr("height", height)
                     .style("fill", "#2F4F6F")
                     .style("opacity", "30%")
+                    .on("mouseover", event_mouseover)
+                    .on("mouseout", event_mouseout)
+
+
+
+
+                function event_mouseover(d, i) {
+                    d3.select(this)
+                        .transition()
+                        .duration(0)
+                        .style("opacity", "60%")
+                }
+
+                function event_mouseout(d, i) {
+                    d3.select(this)
+                        .transition()
+                        .duration(0)
+                        .style("opacity", "30%")
+                }
             });
     </script>
     
