@@ -178,6 +178,7 @@
                 function event_panel() {
                     match_text = document.querySelector("#match-text")
 
+                    // How the traditional models view events
                     vader_outcome = ""
                     if(event_sentiment.vader_avg > 0){
                         vader_outcome = "positive"
@@ -195,23 +196,26 @@
                         tb_outcome = "neutral"
                     }
 
+                    // Basic attributes
                     match_text.innerHTML = `
                     <p><b>Match:</b> ${event_attributes.match}
                     <br><b>Event:</b> ${event_attributes.type}</p>
                     <p>VADER baseline: ${event_sentiment.vader_avg.toFixed(2)} (${vader_outcome})
                     <br>TextBlob baseline: ${event_sentiment.tb_avg.toFixed(2)} (${tb_outcome})</p>
                     `
-
+                    
                     match_info_div = document.querySelector("#match-info")
                     match_info_div.style.opacity = "100%";
 
+                    // Starts making pie chart
                     var pie_div = d3.select("#match-chart")
                     pie_div.selectAll("*").remove();
 
                     pie_svg = pie_div.append("svg")
                         .attr("width", pie_dim + margin.left + margin.right)
                         .attr("height", pie_dim + margin.top + margin.bottom)
-
+                    
+                    // Pie chart slices
                     pie_svg.append("g")
                         .attr("transform",
                             "translate(" + (radius + margin.left) + "," + (radius + margin.top) + ")")
@@ -221,7 +225,28 @@
                             .attr("fill", d => sentiment_color[d.data.name])
                             .attr("d", arc)
                         .append("title")
-                            .text(d => `${d.data.name}`)
+                            .text(d => `${d.data.name}: ${(d.data.value * 100).toFixed(2)}%`)
+                    
+                    // Pie chart labels
+                    pie_svg.append("g")
+                            .attr("font-family", "system-ui")
+                            .attr("font-size", "11")
+                            .attr("text-anchor", "middle")
+                            .attr("transform",
+                            "translate(" + (radius + margin.left) + "," + (radius + margin.top) + ")")
+                        .selectAll()
+                        .data(pie(event_sentiment.transformer_data))
+                        .join("text")
+                            .attr("transform", d => `translate(${arc.centroid(d)})`)
+                            .call(t => t.append("tspan")
+                                .attr("y", d => (d.endAngle - d.startAngle) > 0.25 ? "-0.4em" : "0em")
+                                .attr("font-weight", "bold")
+                                .text(d => d.data.name))
+                            .call(t => t.filter(d => (d.endAngle - d.startAngle) > 0.25).append("tspan")
+                                .attr("x", 0)
+                                .attr("y", "0.7em")
+                                .attr("fill-opacity", 0.7)
+                                .text(d => `${(d.data.value * 100).toFixed(2)}%`))
                 }
             });
     </script>
