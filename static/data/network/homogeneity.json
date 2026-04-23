@@ -1,0 +1,11 @@
+{
+  "within_community_agreement": 0.4146,
+  "across_community_baseline": 0.413,
+  "lift": 0.0017,
+  "emotion_assortativity": 0.027,
+  "num_communities_considered": 39,
+  "modularity": 0.5018,
+  "total_nodes": 29389,
+  "total_edges": 66912,
+  "min_community_size": 10
+}

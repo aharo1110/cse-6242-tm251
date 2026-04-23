@@ -29,9 +29,21 @@
             
             </div>
         </div>
-        
+
+        <div style="margin-top: 3em;">
+            <h3>Mention Network Communities</h3>
+            <p>
+                Top communities detected by Louvain on the author-to-author mention graph,
+                colored by each author's dominant emotion across all of their tweets.
+                Node size scales with degree. Drag to explore.
+            </p>
+            <div id="network-summary" style="font-size: 0.9em; color: #555; margin-bottom: 0.5em;"></div>
+            <div id="network-legend" style="font-size: 0.85em; margin-bottom: 0.5em;"></div>
+            <div id="network" style="border: 1px solid #ddd; border-radius: 4px;"></div>
+        </div>
+
     </div>
-    {% include 'partials/footer.html '%}
+    {% include 'partials/footer.html' %}
 
     <script>
         // Dimensions/margins
@@ -264,6 +276,115 @@
                                 .attr("fill-opacity", 0.7)
                                 .text(d => `${(d.data.value * 100).toFixed(2)}%`))
                 }
+            });
+
+        // ==== Mention network force graph ====
+        const networkWidth = site_width;
+        const networkHeight = 520;
+
+        const networkSvg = d3.select("#network")
+            .append("svg")
+            .attr("width", networkWidth)
+            .attr("height", networkHeight);
+
+        const nodesUrl = "{{ url_for('static', filename=network_nodes_path) }}";
+        const edgesUrl = "{{ url_for('static', filename=network_edges_path) }}";
+        const homogeneityUrl = "{{ url_for('static', filename=network_homogeneity_path) }}";
+
+        const emotionColor = {
+            "joy": "#59a14f",
+            "surprise": "#76b7b2",
+            "neutral": "#bab0ab",
+            "fear": "#ff9da7",
+            "disgust": "#f28e2c",
+            "sadness": "#af7aa1",
+            "anger": "#e15759",
+            "unknown": "#cccccc"
+        };
+
+        const legendOrder = ["joy", "surprise", "neutral", "fear", "disgust", "sadness", "anger"];
+        const legendDiv = document.querySelector("#network-legend");
+        legendOrder.forEach(function(em) {
+            const span = document.createElement("span");
+            span.style.display = "inline-flex";
+            span.style.alignItems = "center";
+            span.style.marginRight = "1em";
+            span.innerHTML = `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${emotionColor[em]};margin-right:0.4em;"></span>${em}`;
+            legendDiv.appendChild(span);
+        });
+
+        Promise.all([d3.json(nodesUrl), d3.json(edgesUrl), d3.json(homogeneityUrl)])
+            .then(function(files) {
+                const nodesData = files[0].map(function(d) { return Object.assign({}, d); });
+                const edgesData = files[1].map(function(d) { return { source: d.source, target: d.target, weight: d.weight }; });
+                const homogeneity = files[2];
+
+                document.querySelector("#network-summary").innerHTML = `
+                    <b>${nodesData.length}</b> authors in top 8 communities
+                    &middot; modularity <b>${homogeneity.modularity}</b>
+                    &middot; within-community emotion agreement <b>${homogeneity.within_community_agreement}</b>
+                    vs. global baseline <b>${homogeneity.across_community_baseline}</b>
+                    &middot; emotion assortativity <b>${homogeneity.emotion_assortativity}</b>
+                `;
+
+                const degreeExtent = d3.extent(nodesData, function(d) { return d.degree; });
+                const radiusScale = d3.scaleSqrt().domain(degreeExtent).range([3, 14]);
+
+                const simulation = d3.forceSimulation(nodesData)
+                    .force("link", d3.forceLink(edgesData).id(function(d) { return d.id; }).distance(60).strength(0.2))
+                    .force("charge", d3.forceManyBody().strength(-60))
+                    .force("center", d3.forceCenter(networkWidth / 2, networkHeight / 2))
+                    .force("collide", d3.forceCollide().radius(function(d) { return radiusScale(d.degree) + 2; }));
+
+                const link = networkSvg.append("g")
+                    .attr("stroke", "#999")
+                    .attr("stroke-opacity", 0.3)
+                    .selectAll("line")
+                    .data(edgesData)
+                    .enter().append("line")
+                    .attr("stroke-width", function(d) { return Math.min(3, 0.5 + Math.log(d.weight)); });
+
+                const node = networkSvg.append("g")
+                    .attr("stroke", "#fff")
+                    .attr("stroke-width", 1)
+                    .selectAll("circle")
+                    .data(nodesData)
+                    .enter().append("circle")
+                    .attr("r", function(d) { return radiusScale(d.degree); })
+                    .attr("fill", function(d) { return emotionColor[d.emotion] || emotionColor.unknown; })
+                    .call(d3.drag()
+                        .on("start", function(d) {
+                            if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+                            d.fx = d.x; d.fy = d.y;
+                        })
+                        .on("drag", function(d) {
+                            d.fx = d3.event.x; d.fy = d3.event.y;
+                        })
+                        .on("end", function(d) {
+                            if (!d3.event.active) simulation.alphaTarget(0);
+                            d.fx = null; d.fy = null;
+                        })
+                    );
+
+                node.append("title")
+                    .text(function(d) {
+                        return `${d.id}\ncommunity ${d.community} · ${d.emotion}\ntweets: ${d.tweets} · degree: ${d.degree}`;
+                    });
+
+                simulation.on("tick", function() {
+                    link
+                        .attr("x1", function(d) { return d.source.x; })
+                        .attr("y1", function(d) { return d.source.y; })
+                        .attr("x2", function(d) { return d.target.x; })
+                        .attr("y2", function(d) { return d.target.y; });
+                    node
+                        .attr("cx", function(d) { return d.x; })
+                        .attr("cy", function(d) { return d.y; });
+                });
+            })
+            .catch(function(err) {
+                document.querySelector("#network-summary").innerHTML =
+                    `<span style="color:#b00">Network data failed to load: ${err}</span>`;
             });
     </script>
     
