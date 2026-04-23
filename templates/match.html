@@ -6,6 +6,8 @@
     <title>Data on Matchdate {{name}}</title>
     <script type="text/javascript" src="https://d3js.org/d3.v5.min.js"></script>
     <script type="text/javascript" src="https://d3js.org/d3-dsv.min.js"></script>
+
+    <style></style>
 </head>
 <body>
     <div class="container-sm" style="padding:3em;">
@@ -13,6 +15,15 @@
         <p>Time at the bottom is in UTC.<br>The vertical axis shows the amount of tweets over time in the match.<br>In order to find info on sentiment during event(s) hover over with the mouse.</p>
         <a href="/">Go Back</a>
         <div id="histogram"></div>
+        <div id="match-info" style="display:flex; width: 100%; opacity: 0%">
+            <div id="match-text">
+                <p><b>Match:</b>
+                    <br><b>Event:</b></p>
+            </div>
+            <div><h6 style="width:320px; text-align:center; font-weight: bold;">Transformer Analysis</h6>
+                <div id="match-chart"></div></div>
+            
+        </div>
     </div>
 
 
@@ -20,7 +31,9 @@
         // Dimensions/margins
         var margin = {top: 10, right: 30, bottom: 30, left: 40},
         width = 1200 - margin.left - margin.right,
-        height = 500 - margin.top - margin.bottom;
+        height = 400 - margin.top - margin.bottom;
+
+        var pie_dim = 250;
 
         // SVG obj
         var svg = d3.select("#histogram")
@@ -32,6 +45,26 @@
                 "translate(" + margin.left + "," + margin.top + ")");
         
         const parse_time = d3.utcParse("%Y-%m-%d %H:%M:%S")
+
+        // Pie chart vars
+        const radius = pie_dim / 2;
+        const arc = d3.arc()
+            .innerRadius(0)
+            .outerRadius((radius - 1));
+        const pie = d3.pie()
+            .padAngle(1 / radius)
+            .sort(null)
+            .value(d => d.value);
+
+        const sentiment_color = {
+            "Joy": "#59a14f",
+            "Surprise": "#76b7b2",
+            "Neutral": "#bab0ab",
+            "Fear": "#ff9da7",
+            "Disgust": "#f28e2c",
+            "Sadness": "#af7aa1",
+            "Anger": "#e15759"
+        }
 
         // data parse
         d3.dsv(",", "{{ url_for('static', filename=path)}}", function(d) {
@@ -66,19 +99,16 @@
                 event_sentiment = {
                     vader_avg: d3.mean(event_data, function(d) { return d.vader_compound}),
                     tb_avg: d3.mean(event_data, function(d) { return d.tb_polarity}),
-                    emo_joy: d3.mean(event_data, function(d) { return d.emo_joy}),
-                    emo_sadness: d3.mean(event_data, function(d) { return d.emo_sadness}),
-                    emo_anger: d3.mean(event_data, function(d) { return d.emo_anger}),
-                    emo_fear: d3.mean(event_data, function(d) { return d.emo_fear}),
-                    emo_disgust: d3.mean(event_data, function(d) { return d.emo_disgust}),
-                    emo_surprise: d3.mean(event_data, function(d) { return d.emo_surprise}),
-                    emo_neutral: d3.mean(event_data, function(d) { return d.emo_neutral}),
+                    transformer_data: [
+                        {"name": "Joy", "value": d3.mean(event_data, function(d) { return d.emo_joy})},
+                        {"name": "Surprise", "value": d3.mean(event_data, function(d) { return d.emo_surprise})},
+                        {"name": "Neutral", "value": d3.mean(event_data, function(d) { return d.emo_neutral})},
+                        {"name": "Fear", "value": d3.mean(event_data, function(d) { return d.emo_fear})},
+                        {"name": "Disgust", "value": d3.mean(event_data, function(d) { return d.emo_disgust})},
+                        {"name": "Sadness", "value": d3.mean(event_data, function(d) { return d.emo_sadness})},
+                        {"name": "Anger", "value": d3.mean(event_data, function(d) { return d.emo_anger})},
+                    ]
                 }
-
-                console.log(event_start)
-                console.log(event_end)
-                console.log(event_attributes)
-                console.log(event_sentiment)
                 // X axis
                 var x = d3.scaleLinear()
                     .domain([d3.min(data, function(d) { return +d.datetime }), d3.max(data, function(d) { return +d.datetime })])
@@ -129,19 +159,69 @@
 
 
 
-
+                // Mouse events
                 function event_mouseover(d, i) {
                     d3.select(this)
                         .transition()
                         .duration(0)
                         .style("opacity", "60%")
+                    event_panel()
                 }
-
                 function event_mouseout(d, i) {
                     d3.select(this)
                         .transition()
                         .duration(0)
                         .style("opacity", "30%")
+                }
+
+                // Creates panel with event attributes
+                function event_panel() {
+                    match_text = document.querySelector("#match-text")
+
+                    vader_outcome = ""
+                    if(event_sentiment.vader_avg > 0){
+                        vader_outcome = "positive"
+                    } else if (event_sentiment.vader_avg < 0){
+                        vader_outcome = "negative"
+                    } else {
+                        vader_outcome = "neutral"
+                    }
+                    tb_outcome = ""
+                    if(event_sentiment.tb_avg > 0){
+                        tb_outcome = "positive"
+                    } else if (event_sentiment.tb_avg < 0){
+                        tb_outcome = "negative"
+                    } else {
+                        tb_outcome = "neutral"
+                    }
+
+                    match_text.innerHTML = `
+                    <p><b>Match:</b> ${event_attributes.match}
+                    <br><b>Event:</b> ${event_attributes.type}</p>
+                    <p>VADER baseline: ${event_sentiment.vader_avg.toFixed(2)} (${vader_outcome})
+                    <br>TextBlob baseline: ${event_sentiment.tb_avg.toFixed(2)} (${tb_outcome})</p>
+                    `
+
+                    match_info_div = document.querySelector("#match-info")
+                    match_info_div.style.opacity = "100%";
+
+                    var pie_div = d3.select("#match-chart")
+                    pie_div.selectAll("*").remove();
+
+                    pie_svg = pie_div.append("svg")
+                        .attr("width", pie_dim + margin.left + margin.right)
+                        .attr("height", pie_dim + margin.top + margin.bottom)
+
+                    pie_svg.append("g")
+                        .attr("transform",
+                            "translate(" + (radius + margin.left) + "," + (radius + margin.top) + ")")
+                        .selectAll()
+                        .data(pie(event_sentiment.transformer_data))
+                        .join("path")
+                            .attr("fill", d => sentiment_color[d.data.name])
+                            .attr("d", arc)
+                        .append("title")
+                            .text(d => `${d.data.name}`)
                 }
             });
     </script>
