@@ -1,0 +1,86 @@
+Final Report | Team 251 | Project: Analyzing Fan Reactions to World Cup Through Twitter Sentiment | William Yoo, Mason Nguyen, Adrian Haro, Shiwei He, Matthew Nguyen
+
+Introduction
+Twitter gives us a real-time window into how people feel during live events. The 2018 FIFA World Cup, which ran June 14 to July 15, produced over 530,000 tweets reacting to one of the most-watched sporting events in history. Our project looks at two related questions: how does fan sentiment shift around specific in-match moments like goals and red cards, and how do those emotional reactions spread through the retweet network? Most Twitter sentiment work treats each tweet as its own isolated data point. Few systems tie sentiment changes to specific timestamped events, and fewer still look at how emotions move through retweet communities. Our pipeline tries to do both, built around four components:
+Event-aligned sentiment and emotion modeling: tracking sentiment before, during, and after key match moments such as goals, red cards, and penalty shootouts. Temporal burst detection: identifying spikes in tweet volume that correlate with on-pitch events. Retweet network analysis: examining how emotional content propagates across fan communities. An interactive visualization dashboard: letting users explore sentiment patterns by match, team, and time window.
+After preprocessing, we have 113,821 unique cleaned tweets with 31 derived features covering match phase labels, nearest event alignment, engagement scores, platform of origin, and geographic data.
+
+Problem Definition
+We define three interconnected research problems:
+Event-Aligned Sentiment Dynamics: Can we identify and measure sentiment shifts that are tied to specific match events? Standard classifiers give you a static polarity score per tweet, but we want to treat sentiment as something that changes over time - tracking how fast and how strongly fan emotion responds to goals, penalties, and eliminations.
+Emotion Propagation Through Retweet Networks: When a tweet expressing a strong emotion goes viral after a key moment, how far does that emotion spread? We model the retweet network as a directed graph and look at whether emotional content stays within communities or crosses over.
+Visualization of Multi-Dimensional Sentiment: Displaying sentiment timelines, geographic distributions, network structure, and temporal patterns together is genuinely hard to do without overwhelming users. The dashboard design problem is as much about information architecture as it is about implementation.
+
+Literature Survey
+Our review draws from five areas: tweet sentiment methods, spatiotemporal modeling, event detection from social streams, Twitter network structure, and combined sentiment-event frameworks.
+Yue et al. (2022) survey the landscape of Twitter sentiment classifiers across lexicon-based, classical ML, and deep learning approaches. They note that informal language - slang, emojis, sarcasm - poses problems for all three, and that most systems only do binary polarity without any temporal component. That gap is part of what we are trying to fill with transformer-based models.
+Schwartz et al. (2018) show that raw sentiment trends get distorted by time-of-day, day-of-week, demographics, and geography. This is directly why we label tweets by match phase (pre_match, during_match, post_match) rather than just looking at raw hourly sentiment across all 64 matches.
+Khayyat et al. (2019) model Twitter streams as dynamic graphs and detect events through burst detection, identifying what they call "heartbeat" patterns of sudden activity. We build on this but add sentiment classification so we can say not just that something happened, but whether fans were celebrating or upset.
+Rout et al. (2020) review Twitter network structure and sentiment spread, but mostly as separate topics. We connect them by attaching emotion labels to nodes in the retweet graph, then asking whether high-emotion tweets from influential accounts trigger similarly-valenced cascades.
+Becker et al. (2014) find that combining keyword burst detection with sentiment signals beats keyword-only event detection. We take the same dual-signal approach but have an advantage they did not - official FIFA event timestamps for ground-truth validation.
+
+Proposed Method
+
+Intuition
+The four key innovations of our approach are:
+
+1) Rather than relying on unsupervised burst detection alone, we align every tweet with a signed time offset from a curated table of official match events (goals, penalties, red cards, shootouts). This lets us measure sentiment response with precision relative to known stimuli (ground-truth event alignment)
+2) We label all tweets across all 64 matches as pre_match, during_match, or post_match. This controls for the temporal confounders identified by Schwartz et al. and lets us compare baseline versus event-driven sentiment directly (match-phase temporal features)
+3) Instead of just positive/negative, we classify tweets into six Ekman emotion categories (joy, anger, sadness, fear, surprise, disgust). A last-minute winner and a penalty shootout loss can both spike tweet volume - the emotion labels tell you which is which (multi-dimensional emotion modeling).  
+4) The dashboard ties retweet network topology to emotion data in one view, so users can follow how a specific emotional reaction spreads from a source tweet outward through fan communities during a match (integrated network-sentiment visualization).
+
+Detailed Method
+Component 1: Data Preparation
+The preprocessing pipeline runs as a 10-step Jupyter notebook and outputs a cleaned CSV ready for modeling. The raw dataset had 530,000 tweets with several issues we addressed in sequence: encoding repair for UTF-8 mojibake caused by Latin-1 misreading, deduplication that removed 415,760 rows (82.4% of raw tweets were retweets, leaving 114,240 unique texts), and null handling where Place was filled as 'Unknown', Likes/RTs were zero-filled, Followers/Friends were median-imputed, and rows with no tweet text were dropped.
+Each tweet then went through six NLP steps: lowercase normalization, emoji demojization (converting e.g. fire emoji to the word 'fire' to preserve affective signal), URL and @mention removal, hashtag symbol stripping while keeping the text, punctuation and digit removal, and stopword removal with WordNet lemmatization. After dropping zero-token results, 113,821 tweets remained. Token counts peak at 5-6 per tweet, which fits the short, informal style of sports commentary.
+Component 2: Sentiment & Emotion Modeling 
+A two-stage classifier pipeline was implemented which fully executed all 113,821 cleaned tweets where the results were exported to a CSV file. In the preliminary stage, two lexicon-based models were scored against each other. VADER classified tweets as 52.4% positive, 30.2% neutral, and 17.3% negative. TextBlob classified tweets as 42.1% positive, 43.4% neutral, and 14.5% negative - reflecting a more conservative score for short, informal tweets. These baseline models agreed on only 63.2% of tweets highlighting meaningful disagreements between the two.
+In the first stage of the classifier applied the RoBERTa model which was fine-tuned on approximately 124 million tweets and on the SemEval 2017 Twitter sentiment task (the closest publicly available equivalent to the BERTweet model). It classified 31.8% of tweets as positive, 53.0% as neutral, and 15.3% as negative. The agreement rate between the BERTweet and baseline models were 62.6% against VADER and 61.8% against TextBlob. This indicates that the transformer frequently diverges from these lexicon-based models specifically on shorter, idiomatic tweets. 
+The second stage of the classifier applied one of the seven categories (six Ekman emotions plus neutral) to the tweets. Neutral was most common (41.0%), followed by joy (24.7%), surprise (10.7%), sadness (10.5%), anger (7.7%), fear (4.6%), and lastly disgust (0.9%). 
+Component 3: Event Detection & Network Analysis
+In this component, we aim to identify key match events by analyzing Twitter activity over time. Tweets are aggregated at the minute level to track both tweet volume and average sentiment throughout each match.
+We detect potential events using two signals. The first captures spikes in tweet volume using a rolling z-score, while the second measures sentiment change relative to a local average. These signals are combined to highlight moments where both activity and sentiment shift occur.
+Using this approach, we identify candidate event timestamps, which are later compared against curated FIFA match events for evaluation. In our dataset, only a small portion of events (6 out of 26) generate noticeable tweet activity, which limits the number of detectable signals. Nevertheless, these detected moments provide a useful basis for analyzing how Twitter activity reflects real-world match dynamics.
+Component 4: Interactive Visualization Dashboard
+[insert finalized part here]
+
+Evaluation
+
+Description of Testbed
+Experiment 1 - Sentiment Classification Accuracy
+Which sentiment modeling approach (transformer-based or lexicon-based) works best for informal, sports-focused Twitter text? 
+How much accuracy can we gain by using domain-adapted transformers (RoBERTa/BERTweet) over general-purpose tools like Vader and Textblob?
+Can any of these models classify World Cup tweets reliably enough to support downstream event detection and network analysis?
+Experiment 2 - Event Detection Accuracy
+Can we automatically detect key match events (i.e. goals, red cards, penalties) from Twitter activity alone?
+We find that some key match events can be detected from Twitter activity, but not consistently across all events. Only a subset of events produce noticeable spikes in tweet volume or sentiment, indicating that detection is limited by the level of user engagement in the dataset.
+Does combining tweet volume spikes with sentiment shifts detect events more precisely than using a single source alone?
+The combined dual-signal approach is more selective than using volume or sentiment alone. While volume-only detection captures more potential events, it also introduces more noise. In contrast, the dual-signal method focuses on moments where both activity and sentiment change are present, leading to more precise but fewer detections.
+How does the pipeline’s timing align with official FIFA event timestamps?
+For events with sufficient tweet coverage, detected timestamps generally align closely with official FIFA event times within a small time window. However, for events with low tweet activity, alignment is weaker or absent, which highlights the limitation of relying solely on social media signals for event detection.
+Experiment 3 - Network Emotional Homogeneity
+Do fanbases in retweet network clusters share the same emotion reactions to match events?
+Is the emotional agreement higher within fanbases than across them (i.e. is emotions spread within the group rather than broadly)?
+Do community emotion patterns reflect national team affiliations?
+Experiment 4 - Visualization Usability
+Does this dashboard communicate sentiment patterns clearly enough for users to identify key match moments without explicitly being told what those moments are?
+How accurately and quickly can a user interpret the visualizations to reconstruction an emotional arc from the match?
+
+Detailed Description of Experiment
+Experiment 1 - Sentiment Classification Accuracy
+The complete sentiment classification pipeline directly engages with all three questions. In regards to which model is best for informal, sports-focused tweets, the models have high disagreement. VADER and TextBlob agree with each other nearly 63.2% of the time, and the BERTweet model diverges from each of those models at a similar rate (nearly 63%). A qualitative inspection of high-confidence disagreements (i.e. when VADER labeled as positive and BERTweet labels as negative with >85% confidence) confirms that BERTweet catches more negative tweets like irony and frustration compared to VADER which misread these as positive tweets. 
+In regards to the question about accuracy gained from domain adaptation, the distributional and disagreement evidence points to BERTweet capturing more nuanced signals. The BERTWeet model is significantly better than these lexicon models when reading sarcasm, irony, or sports-context tweets. A tweet like “Wow what a defense” would most likely be read as positive in the VADER model when it was most likely sarcastic. TextBlob has the same fundamental weakness with a high neutrality rate (43.4% compared to VADER’s 30.2%) suggesting it abstains from making a decision on difficult cases.
+In regards to the reliability of these models, the outputs of this two-stage sentiment analysis will serve as an indirect test of whether the sentiment signals are stable enough to detect real events from FIFA World Cup matches. The outputs from this stage will have to be tested downstream.
+Experiment 2 - Event Detection Accuracy
+The results show that event detection performance varies across methods and is strongly influenced by tweet activity. In our dataset, the volume-only approach detects 3 out of 26 curated events (11.5%), while the sentiment-only approach achieves the same detection rate. The dual-signal method detects 5 out of 26 events (19.2%), indicating improved performance when combining both signals.
+Consistent with the observation in Component 3, only 6 out of 26 events generate noticeable tweet activity within the selected time window. For these events, the dual-signal method successfully detects 5 out of 6 cases, showing close alignment with official FIFA event timestamps. In contrast, events with low tweet coverage are generally missed by all methods.
+These results suggest that while Twitter activity can capture certain high-impact match events, overall detection performance is constrained by data sparsity. The dual-signal approach provides a more precise but more conservative detection strategy when sufficient user engagement is present.
+Experiment 3 - Network Emotional Homogeneity
+[description of results]
+Experiment 4 - Visualization Usability
+[description of results]
+
+Conclusion
+[Waiting on rest of project to be written]
+
+Effort Discretion: All team members have contributed a similar amount of effort.

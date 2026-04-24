@@ -18,8 +18,8 @@
                         Select matchdate
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-                        {% for i in matches%}
-                        <li><a class="dropdown-item" href="/match?match={{i}}">{{i}}</a></li>
+                        {% for md in matchdates %}
+                        <li><a class="dropdown-item" href="/match?match={{md.date}}">{{md.label}}</a></li>
                         {% endfor %}
                     </ul>
                 </div>
@@ -32,6 +32,6 @@
         </div>
         
     </div>
-    {% include 'partials/footer.html '%}
+    {% include 'partials/footer.html' %}
     
 </body>

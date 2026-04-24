@@ -1,0 +1,24 @@
+ * Serving Flask app 'app'
+ * Debug mode: off
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5050
+[33mPress CTRL+C to quit[0m
+127.0.0.1 - - [23/Apr/2026 13:27:04] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [23/Apr/2026 13:27:04] "GET /match?match=2018-07-15 HTTP/1.1" 200 -
+127.0.0.1 - - [23/Apr/2026 13:27:12] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [23/Apr/2026 13:28:07] "GET /match?match=2018-07-01 HTTP/1.1" 200 -
+127.0.0.1 - - [23/Apr/2026 13:28:07] "GET /static/data/fifa_tweets_sentiment.csv HTTP/1.1" 200 -
+127.0.0.1 - - [23/Apr/2026 13:28:07] "GET /static/data/network/nodes.json HTTP/1.1" 200 -
+127.0.0.1 - - [23/Apr/2026 13:28:07] "GET /static/data/network/homogeneity.json HTTP/1.1" 200 -
+127.0.0.1 - - [23/Apr/2026 13:28:07] "GET /static/data/network/edges.json HTTP/1.1" 200 -
+127.0.0.1 - - [23/Apr/2026 13:28:08] "GET /match?match=2018-07-15 HTTP/1.1" 200 -
+127.0.0.1 - - [23/Apr/2026 13:28:08] "[36mGET /static/data/network/edges.json HTTP/1.1[0m" 304 -
+127.0.0.1 - - [23/Apr/2026 13:28:08] "[36mGET /static/data/fifa_tweets_sentiment.csv HTTP/1.1[0m" 304 -
+127.0.0.1 - - [23/Apr/2026 13:28:08] "[36mGET /static/data/network/nodes.json HTTP/1.1[0m" 304 -
+127.0.0.1 - - [23/Apr/2026 13:28:08] "[36mGET /static/data/network/homogeneity.json HTTP/1.1[0m" 304 -
+127.0.0.1 - - [23/Apr/2026 13:28:22] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [23/Apr/2026 13:28:23] "GET /match?match=2018-07-03 HTTP/1.1" 200 -
+127.0.0.1 - - [23/Apr/2026 13:28:23] "[36mGET /static/data/fifa_tweets_sentiment.csv HTTP/1.1[0m" 304 -
+127.0.0.1 - - [23/Apr/2026 13:28:23] "[36mGET /static/data/network/nodes.json HTTP/1.1[0m" 304 -
+127.0.0.1 - - [23/Apr/2026 13:28:23] "[36mGET /static/data/network/edges.json HTTP/1.1[0m" 304 -
+127.0.0.1 - - [23/Apr/2026 13:28:23] "[36mGET /static/data/network/homogeneity.json HTTP/1.1[0m" 304 -
