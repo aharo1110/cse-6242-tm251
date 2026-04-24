@@ -9,18 +9,18 @@ bootstrap = Bootstrap5(app)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 paths = {
-    "csv": "static/data/fifa_tweets_sentiment.csv",
-    "csv_indir": "data/fifa_tweets_sentiment.csv",
+    "csv_events": "data/events/event_results.csv",
+    "csv_sentiment": "data/fifa_tweets_sentiment.csv",
     "network_nodes": "data/network/nodes.json",
     "network_edges": "data/network/edges.json",
     "network_homogeneity": "data/network/homogeneity.json",
 }
 
-def read_data():
+def read_data(i):
     rows = []
     labels = {}
 
-    with open(paths["csv"], 'r') as file:
+    with open(f"static/{paths[i]}", 'r') as file:
         reader = csv.reader(file)
         l_temp = next(reader)
 
@@ -49,8 +49,10 @@ def build_matchdate_index(rows, labels):
         index.append({"date": date, "label": f"{date} — {' · '.join(matches)}"})
     return index
 
-r, l = read_data()
+r, l = read_data("csv_sentiment")
 matchdate_index = build_matchdate_index(r, l)
+
+er, el = read_data("csv_events")
 
 @app.route("/")
 def main():
@@ -68,8 +70,14 @@ def match():
     return render_template(
         'match.html',
         name=date,
-        path=paths["csv_indir"],
+        path=paths["csv_sentiment"],
         network_nodes_path=paths["network_nodes"],
         network_edges_path=paths["network_edges"],
         network_homogeneity_path=paths["network_homogeneity"],
     )
+
+@app.route("/events")
+def events():
+    detected_events = [i[el["event_name"]] for i in er if i[el["window_tweet_total"]] != "0"]
+    
+    return render_template('events.html', path_sentiment=paths["csv_sentiment"], path_event=paths["csv_events"], events=detected_events)

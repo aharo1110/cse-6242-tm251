@@ -8,18 +8,29 @@
 <body>
     <div class="container-sm" style="padding:3em;">
         <h2>FIFA World Cup Event Visualization</h2>
-        <p>Below is a dropdown with matchdates that have detected events.</p>
-        <p>Upon picking a matchdate, you can see a graph that visualizes tweet data and offers sentiment data for said event(s).</p>
-        <div class="dropdown">
-            <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
-                Select matchdate
-            </button>
-            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-                {% for md in matchdates %}
-                <li><a class="dropdown-item" href="/match?match={{md.date}}">{{md.label}}</a></li>
-                {% endfor %}
-            </ul>
+        <div class="row">
+            <div class="col">
+                <h4>Matchdays</h4>
+                <p>Below is a dropdown with matchdates that have detected events.</p>
+                <p>Upon picking a matchdate, you can see a graph that visualizes tweet data and offers sentiment data for said event(s), as well as a network diagram of user activity on that matchdate.</p>
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+                        Select matchdate
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+                        {% for md in matchdates %}
+                        <li><a class="dropdown-item" href="/match?match={{md.date}}">{{md.label}}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div class="col">
+                <h4>Key Events</h4>
+                <p>Below is a page that lists previously known events that had corresponding tweet data. Additionally, sentiment analysis is performed on the event windows.</p>
+                <a href="/events" class="btn btn-secondary">Go</a>
+            </div>
         </div>
+        
     </div>
     {% include 'partials/footer.html' %}
     

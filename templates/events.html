@@ -1,0 +1,252 @@
+{{ bootstrap.load_css() }}
+{{ bootstrap.load_js() }}
+
+<!DOCTYPE html>
+<head>
+    <title>Data for WC Events</title>
+    <script type="text/javascript" src="https://d3js.org/d3.v5.min.js"></script>
+    <script type="text/javascript" src="https://d3js.org/d3-dsv.min.js"></script>
+</head>
+<body>
+    <div class="container-sm" style="padding:3em;">
+        <h2>Top Events</h2>
+        <div style="width: 100%; display: flex; justify-content: space-between;">
+            <p>The following known events were detected in the existing data.<br>Here they are shown ordered by sentiment Z-score, with sentiment analysis for each event window:</p>
+            <a href="/" class="btn btn-primary" style="height:fit-content;">Go Back</a>
+        </div>
+        {% for i in range(events|length // 2)%}
+        <div class="row">
+            <div class="card col-md-6" id="event-{{ i * 2}}">
+                <div class="card-body" id="event-{{ i * 2}}-info" style="display:flex; justify-content: space-between;">
+                    <div>
+                        <div id="event-{{ i * 2}}-text">
+                        
+                        </div>
+                        <div id="event-{{ i * 2}}-histogram">
+                        
+                        </div>
+                    </div>
+                    <div><h6 style="width:320px; text-align:center; font-weight: bold;">Transformer Analysis</h6>
+                    <div id="event-{{ i * 2}}-chart" style="margin-bottom: 0"></div></div>
+                </div>
+            </div>
+            {% if (i * 2 + 1) < events|length %}
+            <div class="card col-md-6" id="event-{{ i * 2 + 1}}">
+                <div class="card-body" id="event-{{ i * 2 + 1}}-info" style="display:flex; justify-content: space-between;">
+                    <div>
+                        <div id="event-{{ i * 2 + 1}}-text">
+                        
+                        </div>
+                        <div id="event-{{ i * 2 + 1}}-histogram">
+                        
+                        </div>
+                    </div>
+                    <div><h6 style="width:320px; text-align:center; font-weight: bold;">Transformer Analysis</h6>
+                    <div id="event-{{ i * 2 + 1}}-chart" style="margin-bottom: 0"></div></div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>  
+    {% include 'partials/footer.html '%}
+    
+    <script>
+        const parse_time = d3.utcParse("%Y-%m-%d %H:%M:%S")
+
+        const margin = {top: 10, right: 30, bottom: 30, left: 40},
+        width = 250 - margin.left - margin.right,
+        height = 250 - margin.top - margin.bottom;
+
+        const pie_margin = {top: 10, right: 10, bottom: 10, left: 30},
+        pie_dim = 250;
+
+        // Pie chart vars
+        const radius = pie_dim / 2;
+        const arc = d3.arc()
+            .innerRadius(0)
+            .outerRadius((radius - 1));
+        const pie = d3.pie()
+            .padAngle(1 / radius)
+            .sort(null)
+            .value(d => d.value);
+
+        const sentiment_color = {
+            "Joy": "#59a14f",
+            "Surprise": "#76b7b2",
+            "Neutral": "#bab0ab",
+            "Fear": "#ff9da7",
+            "Disgust": "#f28e2c",
+            "Sadness": "#af7aa1",
+            "Anger": "#e15759"
+        }
+
+        d3.dsv(",", "{{ url_for('static', filename=path_event)}}", function(d) {
+                parsed_date = parse_time(d.event_time)
+                return {
+                    match_label: d.match_label,
+                    event_name: d.event_name,
+                    event_time: new Date(parsed_date),
+                    window_start_time: new Date(parsed_date - (10 * 60000)),
+                    window_end_time: new Date(parsed_date + (10)),
+                    window_tweet_total: +d.window_tweet_total,
+                    peak_sent_z: +d.peak_sent_z
+                    // Add more if necessary
+                }
+            })
+            .then(function(data) {
+                data = data.filter(function(d){return d.window_tweet_total > 0});
+                detected_events = []
+                data = data.sort(function(a, b) { return b.peak_sent_z - a.peak_sent_z});
+                for(i = 0; i < data.length; i++){
+                    detected_events.push(data[i])
+                }
+
+                d3.dsv(",", "{{ url_for('static', filename=path_sentiment)}}", function(d) {
+                        return {
+                            nearest_event_match: d.nearest_event_match,
+                            nearest_event_type: d.nearest_event_type,
+                            datetime: new Date(parse_time(d.datetime)),
+                            vader_compound: d.vader_compound,
+                            tb_polarity: d.tb_polarity,
+                            emo_joy: d.emo_joy,
+                            emo_sadness: d.emo_sadness,
+                            emo_anger: d.emo_anger,
+                            emo_fear: d.emo_fear,
+                            emo_disgust: d.emo_disgust,
+                            emo_surprise: d.emo_surprise,
+                            emo_neutral: d.emo_neutral
+                        }
+                    })
+                    .then(function(sentiment_data) {
+                        event_data = []
+                        for(i = 0; i < detected_events.length; i++){
+                            event_data.push(sentiment_data.filter(function(d){return (d.datetime >= detected_events[i].window_start_time && d.datetime <= detected_events[i].window_end_time)}))
+                        }
+                        for(i = 0; i < event_data.length; i++){
+                            ev = event_data[i]
+                            event_transformer_data = [
+                                {"name": "Joy", "value": d3.mean(ev, function(d) { return d.emo_joy})},
+                                {"name": "Surprise", "value": d3.mean(ev, function(d) { return d.emo_surprise})},
+                                {"name": "Neutral", "value": d3.mean(ev, function(d) { return d.emo_neutral})},
+                                {"name": "Fear", "value": d3.mean(ev, function(d) { return d.emo_fear})},
+                                {"name": "Disgust", "value": d3.mean(ev, function(d) { return d.emo_disgust})},
+                                {"name": "Sadness", "value": d3.mean(ev, function(d) { return d.emo_sadness})},
+                                {"name": "Anger", "value": d3.mean(ev, function(d) { return d.emo_anger})},
+                            ]
+
+                            datePrint = d3.utcFormat("%B %-e")
+                            console.log(event_transformer_data)
+                            document.querySelector(`#event-${i}-text`).innerHTML = `
+                            <h5 class="card-title">${detected_events[i].event_name}</h5>
+                            <div class="card-text">
+                                <p><b>Match:</b> ${detected_events[i].match_label} <b>on</b> ${datePrint(detected_events[i].event_time)}
+                                </div>
+                            `
+                            // Add in SVG for histogram
+                            var svg = d3.select(`#event-${i}-histogram`)
+                                .append("svg")
+                                .attr("width", width + margin.left + margin.right)
+                                .attr("height", height + margin.top + margin.bottom)
+                                .append("g")
+                                .attr("transform",
+                                    "translate(" + margin.left + "," + margin.top + ")");
+
+                            // X axis
+                            var x = d3.scaleLinear()
+                                .domain([d3.min(ev, function(d) { return +d.datetime }), d3.max(ev, function(d) { return +d.datetime })])
+                                .range([0, width]);
+                
+                            // X axis ticks
+                            svg.append("g")
+                                .attr("transform", "translate(0," + height + ")")
+                                .call(d3.axisBottom(x).tickFormat(d3.utcFormat("%H:%M")).ticks(4));
+
+                            // Histogram's parameters
+                            var histogram = d3.histogram()
+                                .value(function(d) { return d.datetime; })
+                                .domain(x.domain())
+                                .thresholds(x.ticks(20));
+
+                            // Bins of histogram
+                            var bins = histogram(ev);
+
+                            // Y axis
+                            var y = d3.scaleLinear()
+                                .range([height, 0]);
+                            y.domain([0, d3.max(bins, function(d) { return d.length; })]);
+                
+                            // Y axis ticks
+                            svg.append("g")
+                                .call(d3.axisLeft(y));
+
+                            // Histogram bar rects
+                            svg.selectAll("rect")
+                                .data(bins)
+                                .enter()
+                                .append("rect")
+                                    .attr("x", 1)
+                                    .attr("transform", function(d) { return "translate(" + x(d.x0) + "," + y(d.length) + ")"; })
+                                    .attr("width", function(d) { return x(d.x1) - x(d.x0) -1 ; })
+                                    .attr("height", function(d) { return height - y(d.length); })
+                                    .style("fill", "#4F6F8F")
+
+                            svg.append("line")
+                                .attr("x1", x(detected_events[i].event_time))
+                                .attr("y1", 0)
+                                .attr("x2", x(detected_events[i].event_time))
+                                .attr("y2", height)
+                                .style("stroke", "#000")
+                                .style("stroke-width", 1.5)
+                                .style("stroke-dasharray", ("3", "3"))
+                            svg.append("text")
+                                .attr("x", `${x(detected_events[i].event_time) + 5}px`)
+                                .attr("y", 5)
+                                .attr("font-size", "10")
+                                .attr("font-weight", "bold")
+                                .text("Known event time")
+                            
+                            // Starts making pie chart
+                            var pie_div = d3.select(`#event-${i}-chart`)
+
+                            pie_svg = pie_div.append("svg")
+                                .attr("width", pie_dim + pie_margin.left + pie_margin.right)
+                                .attr("height", pie_dim + pie_margin.top + pie_margin.bottom)
+                    
+                            // Pie chart slices
+                            pie_svg.append("g")
+                                .attr("transform",
+                                    "translate(" + (radius + pie_margin.left) + "," + (radius + pie_margin.top) + ")")
+                                .selectAll()
+                                .data(pie(event_transformer_data))
+                                .join("path")
+                                    .attr("fill", d => sentiment_color[d.data.name])
+                                    .attr("d", arc)
+                                .append("title")
+                                    .text(d => `${d.data.name}: ${(d.data.value * 100).toFixed(2)}%`)
+                    
+                            // Pie chart labels
+                            pie_svg.append("g")
+                                .attr("font-family", "system-ui")
+                                .attr("font-size", "11")
+                                .attr("text-anchor", "middle")
+                                .attr("transform",
+                                    "translate(" + (radius + pie_margin.left) + "," + (radius + pie_margin.top) + ")")
+                            .selectAll()
+                            .data(pie(event_transformer_data))
+                            .join("text")
+                                .attr("transform", d => `translate(${arc.centroid(d)})`)
+                                .call(t => t.append("tspan")
+                                    .attr("y", d => (d.endAngle - d.startAngle) > 0.25 ? "-0.4em" : "0em")
+                                    .attr("font-weight", "bold")
+                                    .text(d => d.data.name))
+                                .call(t => t.filter(d => (d.endAngle - d.startAngle) > 0.25).append("tspan")
+                                    .attr("x", 0)
+                                    .attr("y", "0.7em")
+                                    .attr("fill-opacity", 0.7)
+                                    .text(d => `${(d.data.value * 100).toFixed(2)}%`))
+                            }
+                    });
+            });
+    </script>
+</body>
