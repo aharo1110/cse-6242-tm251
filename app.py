@@ -9,7 +9,7 @@ bootstrap = Bootstrap5(app)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 paths = {
-    "csv_events": "data/fifa_event_detection_results.csv",
+    "csv_events": "data/events/event_results.csv",
     "csv_sentiment": "data/fifa_tweets_sentiment.csv",
     "network_nodes": "data/network/nodes.json",
     "network_edges": "data/network/edges.json",
