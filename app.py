@@ -8,15 +8,15 @@ bootstrap = Bootstrap5(app)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 paths = {
-    "csv": "static/data/fifa_tweets_sentiment.csv",
-    "csv_indir": "data/fifa_tweets_sentiment.csv"
+    "csv_events": "data/fifa_event_detection_results.csv",
+    "csv_sentiment": "data/fifa_tweets_sentiment.csv"
 }
 
 def read_data():
     rows = []
     labels = {}
 
-    with open(paths["csv"], 'r') as file:
+    with open(f"static/{paths["csv_events"]}", 'r') as file:
         reader = csv.reader(file)
         l_temp = next(reader)
 
@@ -32,20 +32,18 @@ r, l = read_data()
 
 @app.route("/")
 def main():
-
-    matches = list(set([i[l["nearest_event_match"]] for i in r if i[l["nearest_event_match"]] != "none"]))
-    matches.sort()
-
     dates = ["2018-07-01", "2018-07-03", "2018-07-15"]
-
     return render_template('index.html', matches=dates)
 
 @app.route("/match", methods=['GET'])
 def match():
     if request.method != 'GET':
         return render_template('match-no.html')
-    #match_data = [i for i in r if i[l["nearest_event_match"]] == request.args["match"]]
 
-    #timestamps = [i[l["datetime"]] for i in match_data]
+    return render_template('match.html', name=request.args["match"], path=paths["csv_sentiment"])
 
-    return render_template('match.html', name=request.args["match"], path=paths["csv_indir"])
+@app.route("/events")
+def events():
+    detected_events = [i[l["event_name"]] for i in r if i[l["window_tweet_total"]] != "0"]
+    
+    return render_template('events.html', path_sentiment=paths["csv_sentiment"], path_event=paths["csv_events"], events=detected_events)
